@@ -1,12 +1,3 @@
-#
-# This is a Shiny web application. You can run the application by clicking
-# the 'Run App' button above.
-#
-# Find out more about building applications with Shiny here:
-#
-#    http://shiny.rstudio.com/
-#
-
 library(shiny)
 library(tidyverse)
 library(icaeDesign)
@@ -31,6 +22,9 @@ ui <- fluidPage(
       sliderInput("n", 
                   label='Anzahl der Wiederholungen \\( n \\)',
                   min = 100, max = 2000, step=100, value = 400),
+      sliderInput("g", 
+                  label='Wohlstandswachstum \\( g \\)',
+                  min = 0.0, max = 0.9, step=0.05, value = 0.0),
       selectInput("dist_kind", 
                   label = "Verteilung des Investitutionsspiels",
                   choices = c("Normalverteilung", 
@@ -60,14 +54,15 @@ ui <- fluidPage(
     # Show a plot of the generated distribution
     mainPanel(
       h3("Ergebnisse"),
-      plotOutput("fuck_plot"),
+      plotOutput("distribution_plot"),
       downloadButton("downloadPlot", "Download der Abbildung im PDF Format"),
       h3("Funktion des Modells"),
       p("Alle Individuen starten mit der gleichen Anfangsausstattung \\( w_{0} \\).
         In \\( n \\) Zeitschritten wird deren Vermögen dann durch den folgenden 
         Mechanismus geupdatet:"),
       uiOutput('f1'),
-      p("wobei \\( r \\) aus einer der drei Verteilungen mit beliebig zu bestimmenden
+      p("wobei \\( g \\) eine allgemeine Wachstumsrate darstellt und \\( r \\) 
+        aus einer der drei Verteilungen mit beliebig zu bestimmenden
         Parametern gezogen wird:"), 
       uiOutput('f2'),
       p("Die entsprechende Verteilung ist oben in 
@@ -79,7 +74,9 @@ ui <- fluidPage(
         auf die finale Verteilung?"),
       p("2. Welchen Einfluss hat die Anzahl der Agenten \\( m \\) und die 
         Anfangsausstattung \\( w_{0} \\) auf die finale Verteilung?"),
-      p("3. Gibt es Parameterkonstellationen, die eine Ungleichverteilung am
+      p("3. Welchen Einfluss hat die allgemeine Wachstumsrate \\( g \\) auf die 
+        finale Verteilung?"),
+      p("4. Gibt es Parameterkonstellationen, die eine Ungleichverteilung am
         Ende der Simulation verhindern?")
     )
   )
@@ -90,7 +87,7 @@ server <- function(input, output) {
   
   output$f1 <- renderUI({
     withMathJax(
-      helpText('$$w_{t+1} = (1+r)\\cdot w_t $$'))
+      helpText('$$w_{t+1} = (1+g+r)\\cdot w_t $$'))
   })
   output$f2 <- renderUI({
     withMathJax(
@@ -101,6 +98,7 @@ server <- function(input, output) {
     m <- input$m
     w_val <- input$w_val
     n <- input$n
+    g <- input$g
     
     w <- rep(w_val, m)
     initial_w <- w
@@ -109,7 +107,7 @@ server <- function(input, output) {
       norm_mean <- input$norm_mean
       norm_sd <- input$norm_sd
       for (i in 1:n){
-        w <- w*(1+rnorm(m, norm_mean, norm_sd)/100)
+        w <- w*(1+g+rnorm(m, norm_mean, norm_sd)/100)
       }
       
       dist_data <- tibble(x_vals=seq(-15, 15, 0.01), 
@@ -120,7 +118,7 @@ server <- function(input, output) {
     } else if (input$dist_kind=="Uniformverteilung"){
 
       for (i in 1:n){
-        w <- w*(1+runif(m, input$unif_min, input$unif_max)/100)
+        w <- w*(1+g+runif(m, input$unif_min, input$unif_max)/100)
       }
       
       dist_data <- tibble(x_vals=seq(input$unif_min-0.5, 
@@ -129,7 +127,7 @@ server <- function(input, output) {
       
     } else if (input$dist_kind=="Exponentialverteilung"){
       for (i in 1:n){
-        w <- w*(1+rexp(m, input$exp_rate)/100)
+        w <- w*(1+g+rexp(m, input$exp_rate)/100)
       }
       
       dist_data <- tibble(x_vals=seq(0, 5, 0.1), 
@@ -187,7 +185,7 @@ server <- function(input, output) {
     full_plot
   })
   
-  output$fuck_plot <- renderPlot({
+  output$distribution_plot <- renderPlot({
     plot_obj()
   })
   
