@@ -147,22 +147,24 @@ server <- function(input, output) {
       scale_y_continuous(expand = expand_scale(c(0, 0.1), c(0,0))) +
       scale_x_continuous(expand = c(0, 0)) +
       ggtitle("Ergebnisverteilung im Investitionsspiel") +
-      theme_icae() + xlab("") + ylab("")
+      xlab("") + ylab("") +
+      theme_minimal() 
     
     investment_start_returns <- ggplot(
       data = plot_data, 
       mapping = aes(x=Individuum, y=initial_w)) +
       geom_line(color="#004c93") + geom_area(fill="#dfe4f2") + 
-      theme_icae() + xlab("") + ylab("") +
+      xlab("") + ylab("") +
       scale_y_continuous(expand = expand_scale(c(0, 0), c(0,5))) +
       scale_x_continuous(expand = c(0, 0)) +
-      ggtitle("Vermögensverteilung zu Beginn") 
+      ggtitle("Vermögensverteilung zu Beginn") +
+      theme_minimal()
     
     investment_end_returns<- ggplot(
       data = plot_data, 
       mapping = aes(x=Individuum, y=final_w)) +
       geom_line(color="#004c93") + geom_area(fill="#dfe4f2") + 
-      theme_icae() + xlab("") + ylab("") +
+      theme_minimal() + xlab("") + ylab("") +
       scale_y_continuous(expand = expand_scale(c(0, 0), c(0,5))) +
       scale_x_continuous(expand = c(0, 0)) +
       ggtitle("Vermögensverteilung am Ende") 
@@ -171,7 +173,7 @@ server <- function(input, output) {
       data = plot_data, 
       mapping = aes(x=log(Individuum), y=log(final_w))) +
       geom_line(color="#004c93") + 
-      theme_icae() + xlab("") + ylab("") +
+      theme_minimal() + xlab("") + ylab("") +
       scale_y_continuous(expand = expand_scale(c(0, 0), c(0,5))) +
       scale_x_continuous(expand = c(0, 0)) +
       ggtitle("Vermögensverteilung am Ende (log-log)") 
@@ -203,4 +205,3 @@ server <- function(input, output) {
 
 # Run the application 
 shinyApp(ui = ui, server = server)
-
