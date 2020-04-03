@@ -1,6 +1,5 @@
 library(shiny)
 library(tidyverse)
-library(icaeDesign)
 library(ggpubr)
 
 # Define UI for application that draws a histogram
