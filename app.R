@@ -1,5 +1,6 @@
 library(shiny)
 library(tidyverse)
+library(magrittr)
 library(ggpubr)
 
 # Define UI for application that draws a histogram
@@ -21,6 +22,9 @@ ui <- fluidPage(
       sliderInput("n", 
                   label='Anzahl der Wiederholungen \\( n \\)',
                   min = 100, max = 2000, step=100, value = 400),
+      sliderInput("log_log_limits", 
+                  label='Grenzen für log-log Plot',
+                  min = 0, max = 1.0, step=0.01, value = c(0.0, 1.0)),
       sliderInput("g", 
                   label='Wohlstandswachstum \\( g \\)',
                   min = 0.0, max = 0.9, step=0.05, value = 0.0),
@@ -67,7 +71,11 @@ ui <- fluidPage(
       p("Die entsprechende Verteilung ist oben in 
         Panel A) illustriert. Panel B) und C) zeigen die Verteilung von 
         \\( w_{0} \\) und \\( w_{n} \\). Panel D) zeigt die Verteilung von 
-        \\( w_{n} \\) in einem Log-Log Plot (x- und y-Achse logarithmiert)."),
+        \\( w_{n} \\) in einem Log-Log Plot (x- und y-Achse logarithmiert).
+        Dabei können Sie über den Slider links auswählen welche Bereiche der
+        Wohlstandsverteilung betrachtet werden sollen. Ein Intervall (0.9, 1.0)
+        würde z.B. bedeuten, dass nur die größten 10% der Vermögenswerte
+        abgebildet werden."),
       h3("Leitfragen"),
       p("1. Welchen Einfluss haben die unterschiedlichen Verteilungen von \\( r \\)
         auf die finale Verteilung?"),
@@ -75,7 +83,9 @@ ui <- fluidPage(
         Anfangsausstattung \\( w_{0} \\) auf die finale Verteilung?"),
       p("3. Welchen Einfluss hat die allgemeine Wachstumsrate \\( g \\) auf die 
         finale Verteilung?"),
-      p("4. Gibt es Parameterkonstellationen, die eine Ungleichverteilung am
+      p("4. Für welche Bereiche der finalen Wohlstandsverteilung findet man am 
+        ehesten Evidenz für eine Potenzverteilung?"),
+      p("5. Gibt es Parameterkonstellationen, die eine Ungleichverteilung am
         Ende der Simulation verhindern?")
     )
   )
@@ -93,7 +103,7 @@ server <- function(input, output) {
       helpText('$$r\\propto \\mathcal{N}(\\mu, \\sigma),$$ $$r\\propto \\mathcal{U}(min, max),$$ oder $$r\\propto \\mathcal{E}(\\lambda)$$'))
   })
   
-  plot_obj <- reactive({
+  simulation_data <- reactive({
     m <- input$m
     w_val <- input$w_val
     n <- input$n
@@ -115,7 +125,7 @@ server <- function(input, output) {
                                        sd = norm_sd))
       
     } else if (input$dist_kind=="Uniformverteilung"){
-
+      
       for (i in 1:n){
         w <- w*(1+g+runif(m, input$unif_min, input$unif_max)/100)
       }
@@ -132,57 +142,73 @@ server <- function(input, output) {
       dist_data <- tibble(x_vals=seq(0, 5, 0.1), 
                           y_vals=dexp(x_vals,rate = input$exp_rate) )
     } 
-
-    final_w <- sort(w)
     
-    plot_data <- tibble(
-      w_init=initial_w, w_final=final_w, Individuum=1:m
+    final_w = sort(w)
+    
+    result_list <- list(
+      "plot_data" = tibble(w_init=initial_w, final_w=final_w, Individuum=1:m),
+      "dist_data" = dist_data
     )
-    
-    investment_game_returns <- ggplot(
-      data=dist_data, aes(x=x_vals, y=y_vals)
-    ) +
-      geom_line(color="#004c93") + geom_area(fill="#dfe4f2") + 
-      scale_y_continuous(expand = expand_scale(c(0, 0.1), c(0,0))) +
-      scale_x_continuous(expand = c(0, 0)) +
-      ggtitle("Ergebnisverteilung im Investitionsspiel") +
-      xlab("") + ylab("") +
-      theme_minimal() 
-    
-    investment_start_returns <- ggplot(
-      data = plot_data, 
-      mapping = aes(x=Individuum, y=initial_w)) +
-      geom_line(color="#004c93") + geom_area(fill="#dfe4f2") + 
-      xlab("") + ylab("") +
-      scale_y_continuous(expand = expand_scale(c(0, 0), c(0,5))) +
-      scale_x_continuous(expand = c(0, 0)) +
-      ggtitle("Vermögensverteilung zu Beginn") +
-      theme_minimal()
-    
-    investment_end_returns<- ggplot(
-      data = plot_data, 
-      mapping = aes(x=Individuum, y=final_w)) +
-      geom_line(color="#004c93") + geom_area(fill="#dfe4f2") + 
-      theme_minimal() + xlab("") + ylab("") +
-      scale_y_continuous(expand = expand_scale(c(0, 0), c(0,5))) +
-      scale_x_continuous(expand = c(0, 0)) +
-      ggtitle("Vermögensverteilung am Ende") 
-    
-    investment_end_log_returns<- ggplot(
-      data = plot_data, 
-      mapping = aes(x=log(Individuum), y=log(final_w))) +
-      geom_line(color="#004c93") + 
-      theme_minimal() + xlab("") + ylab("") +
-      scale_y_continuous(expand = expand_scale(c(0, 0), c(0,5))) +
-      scale_x_continuous(expand = c(0, 0)) +
-      ggtitle("Vermögensverteilung am Ende (log-log)") 
-    
-    full_plot <- ggpubr::ggarrange(investment_game_returns, 
-                                   investment_start_returns, 
-                                   investment_end_returns, 
-                                   investment_end_log_returns,
-                                   ncol = 2, nrow = 2)
-    
+    result_list
+  })
+
+  investment_game_returns <-  reactive({ggplot(
+    data=simulation_data()[["dist_data"]], aes(x=x_vals, y=y_vals)
+  ) +
+    geom_line(color="#004c93") + geom_area(fill="#dfe4f2") + 
+    scale_y_continuous(expand = expansion(c(0, 0.1), c(0,0))) +
+    scale_x_continuous(expand = c(0, 0)) +
+    ggtitle("Ergebnisverteilung im Investitionsspiel") +
+    xlab("") + ylab("") +
+    theme_minimal() 
+  })
+  
+  investment_start_returns <-  reactive({ggplot(
+    data = simulation_data()[["plot_data"]], 
+    mapping = aes(x=Individuum, y=w_init)) +
+    geom_line(color="#004c93") + geom_area(fill="#dfe4f2") + 
+    xlab("") + ylab("") +
+    scale_y_continuous(expand = expansion(c(0, 0), c(0,5))) +
+    scale_x_continuous(expand = c(0, 0)) +
+    ggtitle("Vermögensverteilung zu Beginn") +
+    theme_minimal()
+  })
+  
+  investment_end_returns<-  reactive({ggplot(
+    data = simulation_data()[["plot_data"]], 
+    mapping = aes(x=Individuum, y=final_w)) +
+    geom_line(color="#004c93") + geom_area(fill="#dfe4f2") + 
+    theme_minimal() + xlab("") + ylab("") +
+    scale_y_continuous(expand = expansion(c(0, 0), c(0,5))) +
+    scale_x_continuous(expand = c(0, 0)) +
+    ggtitle("Vermögensverteilung am Ende") 
+  })
+  
+  investment_end_log_returns<-  reactive({
+    simul_data <- simulation_data()[["plot_data"]]
+    threshold_min <- quantile(simul_data$final_w, input$log_log_limits[1])
+    threshold_max <- quantile(simul_data$final_w, input$log_log_limits[2])
+    simul_data %>%
+      dplyr::filter(final_w>=threshold_min,
+                    final_w<=threshold_max) %>%
+    ggplot(
+    data = ., 
+    mapping = aes(x=log(Individuum), y=log(final_w))) +
+    geom_line(color="#004c93") + 
+    theme_minimal() + xlab("") + ylab("") +
+    scale_y_continuous(expand = expansion(c(0, 0), c(0,0))) +
+    scale_x_continuous(expand = c(0, 0)) +
+    ggtitle("Vermögensverteilung am Ende (log-log)") 
+  })
+  
+  plot_obj <- reactive({
+    full_plot <- ggpubr::ggarrange(investment_game_returns(), 
+                                   investment_start_returns(), 
+                                   investment_end_returns(), 
+                                   investment_end_log_returns(),
+                                   ncol = 2, nrow = 2, 
+                                   labels = paste0(LETTERS[1:4], ")"), 
+                                   font.label = list(face="bold"))
     full_plot
   })
   
