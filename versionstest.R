@@ -30,3 +30,20 @@ if (!require(shiny)) install.packages('shiny')
 if (!require(tidyverse)) install.packages('tidyverse')
 if (!require(magrittr)) install.packages('magrittr')
 if (!require(ggpubr)) install.packages('ggpubr')
+
+ggplot_version <- as.character(packageVersion("ggplot2"))
+
+if ((as.double(substr(ggplot_version, 1, 1)) == 3) &  
+    (as.double(substr(ggplot_version, 3, 3)) >= 4) ) {
+  print("ggplot2 ist ausreichend aktuell.")
+} else {
+  cat(paste0(
+    "ACHTUNG! Ihre Version von ggplot ist veraltet!\n ",
+    "Sie verwenden Version ", ggplot_version, 
+    ", aber Sie sollten mindestens Version 3.3.0 verwenden. ",
+    "\nInstallieren Sie das Paket neu mit:"))
+    cat("\ninstall.packages('ggplot2')")
+    cat("\noder")
+    cat("\ninstall.packages('tidyverse')")
+    cat("\nÜberprüfen Sie danach erneut ob die richtige Version installiert ist!")
+}
