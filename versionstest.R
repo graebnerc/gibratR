@@ -4,13 +4,12 @@
 # melden Sie sich bitte mit einem Screenshot der Fehlermeldung bei Claudius Gräbner
 
 # Ich empfehle Ihnen zudem Ihre R Version zu updaten wenn Sie nicht mindestens
-# Version 3.6.1 verwenden. Dieses Sktipt überprüft auch die aktuelle Version von
+# Version 4.0.1 verwenden. Dieses Sktipt überprüft auch die aktuelle Version von
 # R und gibt Ihnen einen Hinweis wenn Sie updaten sollten.
 
 versionstest <- c(
-  as.double(R.version$major)<3,
-  as.double(substr(R.version$minor, 1, 1))<6,
-  as.double(substr(R.version$minor, 1, 1))<6
+  as.double(R.version$major)<4,
+  as.double(substr(R.version$minor, 3, 3))<1
 )
 
 if (TRUE %in% versionstest){
@@ -33,8 +32,8 @@ if (!require(ggpubr)) install.packages('ggpubr')
 
 ggplot_version <- as.character(packageVersion("ggplot2"))
 
-if ((as.double(substr(ggplot_version, 1, 1)) == 3) &  
-    (as.double(substr(ggplot_version, 3, 3)) >= 4) ) {
+if ((as.double(substr(ggplot_version, 1, 1)) >= 3) &  
+    (as.double(substr(ggplot_version, 3, 3)) >= 3) ) {
   print("ggplot2 ist ausreichend aktuell.")
 } else {
   cat(paste0(
