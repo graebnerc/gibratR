@@ -143,7 +143,7 @@ server <- function(input, output) {
                           y_vals=dexp(x_vals,rate = input$exp_rate) )
     } 
     
-    final_w = sort(w)
+    final_w = sort(w, decreasing = TRUE)
     
     result_list <- list(
       "plot_data" = tibble(w_init=initial_w, final_w=final_w, Individuum=1:m),
